@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Search App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center">Movie Search App</h1>
+        <div class="mb-3">
+            <input type="text" id="searchQuery" class="form-control" placeholder="Search for a movie...">
+            <button id="searchButton" class="            <button id="searchButton" class="btn btn-primary mt-2">Search</button>
+            <button id="viewWishlist" class="btn btn-secondary mt-2">View Wishlist</button>
+        </div>
+
+        <!-- Recommendations Section -->
+        <h2>Recommended Movies</h2>
+        <div id="recommendations" class="row mb-4"></div>
+
+        <!-- Search Results Section -->
+        <h2>Search Results</h2>
+        <div id="results" class="row"></div>
+
+        <!-- Movie Details Modal -->
+        <div class="modal fade" id="movieModal" tabindex="-1" aria-labelledby="movieModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="movieModalLabel"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="moviePlot"></p>
+                        <img id="moviePoster" src="" alt="Movie Poster" class="img-fluid">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="addToWishlist">Add to Wishlist</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Fetch recommendations on page load
+            fetchRecommendations();
+
+            // Function to fetch movie recommendations
+            function fetchRecommendations() {
+                $.get('/recommendations', function(data) {
+                    const recommendationsDiv = $('#recommendations');
+                    recommendationsDiv.empty(); // Clear previous recommendations
+
+                    data.forEach(movie => {
+                        const movieCard = `
+                            <div class="col-md-2">
+                                <div class="card mb-3">
+                                    <img src="${movie.Poster}" class="card-img-top" alt="${movie.Title}">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${movie.Title}</h5>
+                                        <button class="btn btn-primary" onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        recommendationsDiv.append(movieCard);
+                    });
+                });
+            }
+
+            // Function to search for movies
+            $('#searchButton').click(function() {
+                const query = $('#searchQuery').val();
+                $.get(`/search?query=${query}`, function(data) {
+                    const resultsDiv = $('#results');
+                    resultsDiv.empty(); // Clear previous results
+
+                    if (data.Response === "True") {
+                        data.Search.forEach(movie => {
+                            const movieCard = `
+                                <div class="col-md-2">
+                                    <div class="card mb-3">
+                                        <img src="${movie.Poster}" class="card-img-top" alt="${movie.Title}">
+                                        <div class="card-body">
+                                            <h5 class="card-title">${movie.Title}</h5>
+                                            <button class="btn btn-primary" onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            resultsDiv.append(movieCard);
+                        });
+                    } else {
+                        resultsDiv.append(`<p>${data.Error}</p>`);
+                    }
+                });
+            });
+
+            // Function to show movie details in a modal
+            window.showMovieDetails = function(movieId) {
+                $.get(`/movie/${movieId}`, function(movie) {
+                    $('#movieModalLabel').text(movie.Title);
+                    $('#moviePlot').text(movie.Plot);
+                    $('#moviePoster').attr('src', movie.Poster);
+                    $('#movieModal').modal('show');
+                });
+            };
+
+            // Wishlist functionality can be added here
+        });
+    </script>
+</body>
+</html>
