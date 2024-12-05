@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Search App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .modal-body img {
+            max-width: 100%;
+            height: auto;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Movie Search App</h1>
+        <div class="mb-3">
+            <div class="input-group">
+                <input type="text" id="searchQuery" class="form-control" placeholder="Search for a movie...">
+                <button id="searchButton" class="btn btn-primary">Search</button>
+                <button id="viewWishlist" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#wishlistModal">View Wishlist</button>
+            </div>
+        </div>
+
+        <!-- Recommendations Section -->
+        <h2>Recommended Movies</h2>
+        <div id="recommendations" class="row mb-4"></div>
+
+        <!-- Search Results Section -->
+        <h2>Search Results</h2>
+        <div id="results" class="row"></div>
+
+        <!-- Movie Details Modal -->
+        <div class="modal fade" id="movieModal" tabindex="-1" aria-labelledby="movieModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="movieModalLabel"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <img id="moviePoster" src="" alt="Movie Poster" class="img-fluid mb-3">
+                        <p id="moviePlot"></p>
+                        <p id="movieYear"></p>
+                        <p id="movieRated"></p>
+                        <p id="movieRuntime"></p>
+                        <p id="movieGenre"></p>
+                        <p id="movieDirector"></p>
+                        <p id="movieWriter"></p>
+                        <p id="movieActors"></p>
+                        <p id="movieLanguage"></p>
+                        <p id="movieCountry"></p>
+                        <p id="movieAwards"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="addToWishlist">Add to Wishlist</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wishlist Modal -->
+        <div class="modal fade" id="wishlistModal" tabindex="-1" aria-labelledby="wishlistModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="wishlistModalLabel">Your Wishlist</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="wishlistItems" class="row"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const wishlistKey = "movieWishlist";
+    
+        // Function to fetch and display movie details
+        function showMovieDetails(movieId) {
+            $.get(`/movie/${movieId}`, function (movie) {
+                $('#movieModalLabel').text(movie.Title).data('id', movieId);
+                $('#moviePlot').text(movie.Plot);
+                $('#movieYear').text(`Year: ${movie.Year}`);
+                $('#movieRated').text(`Rated: ${movie.Rated}`);
+                $('#movieRuntime').text(`Runtime: ${movie.Runtime}`);
+                $('#movieGenre').text(`Genre: ${movie.Genre}`);
+                $('#movieDirector').text(`Director: ${movie.Director}`);
+                $('#movieWriter').text(`Writer: ${movie.Writer}`);
+                $('#movieActors').text(`Actors: ${movie.Actors}`);
+                $('#movieLanguage').text(`Language: ${movie.Language}`);
+                $('#movieCountry').text(`Country: ${movie.Country}`);
+                $('#movieAwards').text(`Awards: ${movie.Awards}`);
+                $('#moviePoster').attr('src', movie.Poster);
+                $('#movieModal').modal('show');
+            });
+        }
+    
+        $(document).ready(function () {
+            // Fetch recommendations on page load
+            fetchRecommendations();
+    
+            function fetchRecommendations() {
+                $.get('/recommendations', function (data) {
+                    const recommendationsDiv = $('#recommendations');
+                    recommendationsDiv.empty();
+    
+                    data.forEach(movie => {
+                        const movieCard = `
+                            <div class="col-md-3 mb-4">
+                                <div class="card">
+                                    <img src="${movie.Poster}" class="card-img-top" alt="${movie.Title}">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${movie.Title}</h5>
+                                        <button class="btn btn-primary" onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        recommendationsDiv.append(movieCard);
+                    });
+                });
+            }
+    
+            // Handle Search button click
+            $('#searchButton').click(function () {
+                const query = $('#searchQuery').val().trim();
+                if (query) {
+                    $.get(`/search?query=${query}`, function (data) {
+                        const resultsDiv = $('#results');
+                        resultsDiv.empty();
+    
+                        if (data.Response === "True") {
+                            data.Search.forEach(movie => {
+                                const movieCard = `
+                                    <div class="col-md-3 mb-4">
+                                        <div class="card">
+                                            <img src="${movie.Poster}" class="card-img-top" alt="${movie.Title}">
+                                            <div class="card-body">
+                                                <h5 class="card-title">${movie.Title}</h5>
+                                                <button class="btn btn-primary" onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                resultsDiv.append(movieCard);
+                            });
+                        } else {
+                            resultsDiv.append('<p class="text-center text-info">No results found.</p>');
+                        }
+                    }).fail(function () {
+                        $('#results').empty().append('<p class="text-center text-danger">Failed to fetch data. Please try again later.</p>');
+                    });
+                } else {
+                    alert('Please enter a search query');
+                }
+            });
+    
+            $('#addToWishlist').click(function () {
+                const movieTitle = $('#movieModalLabel').text();
+                const moviePoster = $('#moviePoster').attr('src');
+                const movieId = $('#movieModalLabel').data('id');
+    
+                let wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
+                if (!wishlist.some(movie => movie.id === movieId)) {
+                    wishlist.push({ id: movieId, title: movieTitle, poster: moviePoster });
+                    localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
+                    alert(`${movieTitle} added to wishlist!`);
+                } else {
+                    alert(`${movieTitle} is already in your wishlist.`);
+                }
+            });
+    
+            $('#wishlistModal').on('show.bs.modal', function () {
+                refreshWishlist();
+            });
+    
+            function refreshWishlist() {
+                const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
+                const wishlistItemsDiv = $('#wishlistItems');
+                wishlistItemsDiv.empty();
+    
+                if (wishlist.length > 0) {
+                    wishlist.forEach(movie => {
+                        const movieItem = `
+                            <div class="col-md-3 mb-4">
+                                <div class="card">
+                                    <img src="${movie.poster}" class="card-img-top" alt="${movie.title}">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${movie.title}</h5>
+                                        <button class="btn btn-primary" onclick="showMovieDetails('${movie.id}')">Show Details</button>
+                                        <button class="btn btn-danger mt-2" onclick="removeFromWishlist('${movie.id}')">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        wishlistItemsDiv.append(movieItem);
+                    });
+                } else {
+                    wishlistItemsDiv.append('<p class="text-center text-info">Your wishlist is empty.</p>');
+                }
+            }
+    
+            window.removeFromWishlist = function (movieId) {
+                let wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
+                wishlist = wishlist.filter(movie => movie.id !== movieId);
+                localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
+                refreshWishlist();
+            };
+        });
+    </script>    
+</body>
+</html>
