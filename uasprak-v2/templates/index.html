@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Search App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Movie Search App</h1>
+        <div class="mt-4">
+            <form id="search-form" class="d-flex">
+                <input 
+                    type="text" 
+                    id="query" 
+                    class="form-control me-2" 
+                    placeholder="Enter movie title..." 
+                    required>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+        <div id="results" class="mt-4">
+            <!-- Movie results will appear here -->
+        </div>
+        <button class="btn btn-secondary mt-4" id="viewWishlist">View Wishlist</button>
+    </div>
+
+    <!-- Modal for Movie Details -->
+    <div class="modal fade" id="movieModal" tabindex="-1" aria-labelledby="movieModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="movieModalLabel">Movie Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="movieDetailsContent">
+                        <!-- Movie details will be injected here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="addToWishlist">Add to Wishlist</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Wishlist -->
+    <div class="modal fade" id="wishlistModal" tabindex="-1" aria-labelledby="wishlistModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="wishlistModalLabel">Your Wishlist</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="wishlistContent">
+                        <!-- Wishlist items will be injected here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const query = document.getElementById('query').value.trim();
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = "<p>Loading...</p>";
+
+            try {
+                const response = await fetch(`/search?query=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch movie data");
+                }
+
+                const data = await response.json();
+                if (data.Error) {
+                    resultsContainer.innerHTML = `<p class="text-danger">${data.Error}</p>`;
+                    return;
+                }
+
+                const movies = data.Search || [];
+                if (movies.length === 0) {
+                    resultsContainer.innerHTML = "<p class='text-warning'>No results found</p>";
+                    return;
+                }
+
+                resultsContainer.innerHTML = `
+                    <div class="row">
+                        ${movies.map(movie => `
+                            <div class="col-md-4 mb-3">
+                                <div class="card">
+                                    <img src="${movie.Poster}" class="card-img-top" alt="${movie.Title}">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${movie.Title}</h5>
+                                        <p class="card-text">Year: ${movie.Year}</p>
+                                        <button class="btn btn-primary" onclick="showDetails('${movie.imdbID}')">                                        Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                resultsContainer.innerHTML = `<p class="text-danger">An error occurred: ${error.message}</p>`;
+            }
+        });
+
+        async function showDetails(movieId) {
+            const response = await fetch(`/movie/${movieId}`);
+            const data = await response.json();
+
+            if (data.Error) {
+                alert(data.Error);
+                return;
+            }
+
+            const movieDetailsContent = `
+                <h5>${data.Title} (${data.Year})</h5>
+                <img src="${data.Poster}" class="img-fluid mb-3" alt="${data.Title}">
+                <p><strong>Plot:</strong> ${data.Plot}</p>
+                <p><strong>Director:</strong> ${data.Director}</p>
+                <p><strong>Actors:</strong> ${data.Actors}</p>
+                <p><strong>Genre:</strong> ${data.Genre}</p>
+                <p><strong>Rating:</strong> ${data.imdbRating}</p>
+            `;
+
+            document.getElementById('movieDetailsContent').innerHTML = movieDetailsContent;
+            document.getElementById('addToWishlist').onclick = () => addToWishlist(data);
+            const modal = new bootstrap.Modal(document.getElementById('movieModal'));
+            modal.show();
+        }
+
+        function addToWishlist(movie) {
+            let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+            if (!wishlist.some(item => item.imdbID === movie.imdbID)) {
+                wishlist.push(movie);
+                localStorage.setItem('wishlist', JSON.stringify(wishlist));
+                alert(`${movie.Title} has been added to your wishlist!`);
+            } else {
+                alert(`${movie.Title} is already in your wishlist.`);
+            }
+        }
+
+        document.getElementById('viewWishlist').addEventListener('click', () => {
+            const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+            const wishlistContent = wishlist.length > 0 
+                ? wishlist.map(movie => `
+                    <div class="card mb-3">
+                        <div class="row g-0">
+                            <div class="col-md-4">
+                                <img src="${movie.Poster}" class="img-fluid rounded-start" alt="${movie.Title}">
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card-body">
+                                    <h5 class="card-title">${movie.Title} (${movie.Year})</h5>
+                                    <p class="card-text"><strong>Plot:</strong> ${movie.Plot}</p>
+                                    <button class="btn btn-danger" onclick="removeFromWishlist('${movie.imdbID}')">Remove from Wishlist</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') 
+                : '<p class="text-warning">Your wishlist is empty.</p>';
+
+            document.getElementById('wishlistContent').innerHTML = wishlistContent;
+            const modal = new bootstrap.Modal(document.getElementById('wishlistModal'));
+            modal.show();
+        });
+
+        function removeFromWishlist(imdbID) {
+            let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+            wishlist = wishlist.filter(movie => movie.imdbID !== imdbID);
+            localStorage.setItem('wishlist', JSON.stringify(wishlist));
+            alert('Movie removed from wishlist.');
+            document.getElementById('viewWishlist').click(); // Refresh the wishlist modal
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
